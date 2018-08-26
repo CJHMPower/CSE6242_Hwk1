@@ -2,6 +2,7 @@ import sys
 import http.client
 import json
 import time
+import csv
 
 requestsRemaining = 40
 
@@ -36,7 +37,7 @@ def RunQueryGetJSON(url, apiKey):
     # check to see if we hit request limit and need to wait out current 10 second interval
     CheckRateLimit(response)
 
-    print("Num requests remainig: " + str(requestsRemaining))
+    #print("Num requests remainig: " + str(requestsRemaining))
     if int(requestsRemaining) < 1:
         time.sleep(2)
         RunQueryGetJSON(url, apiKey)
@@ -55,7 +56,23 @@ def GetComedyMovies(apiKey, comedyID):
         jsonObj = RunQueryGetJSON(url, apiKey)
         comedies.extend(FilterComedyMovies(jsonObj['results'], comedyID))
         page = page + 1
-    return comedies
+        print(str(len(comedies)))
+    return comedies[:300]
+
+def WriteToCSV(fileName, dataList):
+    with open(fileName, mode='w') as csv_file:
+        csvWriter = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for row in dataList:
+            csvWriter.writerow(row)
+
+def ReturnValues(item, keys):
+    values = []
+    for key in keys:
+        values.append(item[key])
+    return values
+    #id = item['id']
+    #name = item['title']
+    #return [id, name]
 
 def main():
     args = sys.argv
@@ -64,8 +81,11 @@ def main():
     jsonObj = RunQueryGetJSON(url, args[1])
     #print(jsonObj)
     comedyID = GetComedyID(jsonObj['genres'])
-    print(len(GetComedyMovies(args[1], comedyID)))
-    
+    comedies = GetComedyMovies(args[1], comedyID)
+    keys = ['id','title']
+    comedyValues = map(lambda row: ReturnValues(row, keys), comedies)
+    #print(comedyValues)
+    WriteToCSV("C:\Development\CSE6242\CSE6242_Hwk1\Files\movie_ID_name.csv",comedyValues)
     input("Press enter to continue")
     exit()
 
