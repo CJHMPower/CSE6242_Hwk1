@@ -51,15 +51,15 @@ def GetComedyMovies(apiKey, comedyID):
     page = 1
     while len(comedies) < 300:
         # use comedy id to find 300 most popular movies in genre since 1/1/2000
-        url = "/3/discover/movie?primary_release_date.gte=2000-1-1&page=" + str(page) + "&include_video=false&include_adult=false&sort_by=popularity.desc&language=en-US&api_key={0}"
+        url = "/3/discover/movie?primary_release_date.gte=2000-1-1&page=" + str(page) + "&include_video=false&include_adult=false&sort_by=popularity.desc&language=en-US&api_key={0}&with_genres=" + str(comedyID)
         #print(page)
         jsonObj = RunQueryGetJSON(url, apiKey)
         comedies.extend(FilterComedyMovies(jsonObj['results'], comedyID))
         page = page + 1
     return comedies[:300]
 
-def WriteToCSV(fileName, dataList):
-    with open(fileName, mode='w', newline='') as csv_file:
+def WriteToCSV(fileName, dataList, writeMode):
+    with open(fileName, mode=writeMode, newline='') as csv_file:
         csvWriter = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for row in dataList:
             csvWriter.writerow(row)
@@ -93,21 +93,37 @@ def RemoveDuplicates(movieList):
     for movie1 in range(0, len(movieList) -1):
         movie1ID = movieList[movie1][0]
         movie1SimilarID = movieList[movie1][1]
-        alreadyAdded = False
-        for movie2 in range(movie1+1, len(movieList)):
-            movie2ID = movieList[movie2][0]
-            movie2SimilarID = movieList[movie2][1]
-            movieIDsSame = movie1ID == movie2SimilarID
-            movieSimilarSame = movie2ID == movie2SimilarID
-            seenBefore = movie2ID in seenMovies
-            if movieIDsSame and movieSimilarSame and seenBefore:
-                alreadyAdded = True
-
-        if alreadyAdded == False:
+        if AlreadySeen(trimmedSet, movie1ID, movie1SimilarID):
+                WriteToCSV("Duplicates.csv", [movieList[movie1]], 'a')
+        else:
             trimmedSet.append(movieList[movie1])
-            seenMovies.append(movie1ID)
+            #seenMovies.append(movie1ID)
+        #for movie2 in range(movie1+1, len(movieList)):
+        #    movie2ID = movieList[movie2][0]
+        #    movie2SimilarID = movieList[movie2][1]
+            
+            #movieIDsSame = movie1ID == movie2SimilarID
+            #movieSimilarSame = movie2ID == movie1SimilarID
+            #seenBefore = movie2SimilarID in seenMovies
+            #if movie1ID == 1593 and movie2ID == 181533:
+            #    print("Movie1ID: " + str(movie1ID) + ", Movie1SimilarID: "+ str(movie1SimilarID) + 
+            #      ", Movie2ID: " + str(movie2ID) + " ,Movie2SimilarID: " + str(movie2SimilarID))
+            #if (movieIDsSame and movieSimilarSame) or seenBefore:
+            #    WriteToCSV("Duplicates.csv", [movieList[movie2]], 'a')
+            #    alreadyAdded = True
+
+        
 
     return trimmedSet
+
+def AlreadySeen(seenList, movieID, similarMovieID):
+    seen = False
+    for movie in seenList:
+        id = movie[0]
+        similar = movie[1]
+        if id == similarMovieID and similar == movieID:
+            seen = True
+    return seen
 
 def NotSeenYet(movieList, movieDetails):
     haventSeen = True
@@ -124,17 +140,21 @@ def main():
     jsonObj = RunQueryGetJSON(url, args[1])
     #print(jsonObj)
     comedyID = GetComedyID(jsonObj['genres'])
+    print("Getting comedy movies")
     comedies = GetComedyMovies(args[1], comedyID)
+    print("Extracting id and title")
     comedyDetails = ExtractMovieDetails(comedies)
     #print(len(list(comedyValues)))
-    WriteToCSV("movie_ID_name.csv", comedyDetails)
+    WriteToCSV("movie_ID_name.csv", comedyDetails, 'w')
 
     # Get similar movie
+    print("Getting similar movies")
     movieDetailsList = FindSimilarMovies(comedyDetails, args[1])
-    WriteToCSV("movie_ID_sim_movie_ID_with_dupes.csv", movieDetailsList)
+    WriteToCSV("movie_ID_sim_movie_ID_with_dupes.csv", movieDetailsList, 'w')
 
+    print("Removing duplicates")
     trimmedList = RemoveDuplicates(movieDetailsList)
-    WriteToCSV("movie_ID_sim_movie_ID.csv", trimmedList)
+    WriteToCSV("movie_ID_sim_movie_ID.csv", trimmedList, 'w')
 
     #WriteToCSV("movie_ID_sim_movie_ID.csv", movieDetailsList)
 
