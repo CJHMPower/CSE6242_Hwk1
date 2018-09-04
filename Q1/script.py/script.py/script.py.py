@@ -94,7 +94,7 @@ def RemoveDuplicates(movieList):
         movie1ID = movieList[movie1][0]
         movie1SimilarID = movieList[movie1][1]
         if AlreadySeen(trimmedSet, movie1ID, movie1SimilarID):
-                WriteToCSV("Duplicates.csv", [movieList[movie1]], 'a')
+                WriteToCSV("Duplicates.csv", [movieList[movie1\]], 'a')
         else:
             trimmedSet.append(movieList[movie1])
             #seenMovies.append(movie1ID)
